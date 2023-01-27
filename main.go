@@ -9,16 +9,24 @@ import (
 )
 
 const (
-	FILE_NAME          = "dirictories.csv"
-	FILE_PERMISSION    = 0666
-	REGULAR_EXPRESSION = `([A-z0-9])+[^;\s]`
-	SAVE_FORMAT        = "%s;%s\n"
+	FILE_NAME        = "dirictories.csv"
+	FILE_PERMISSION  = 0666
+	FILE_PATTERN     = `([A-z0-9])+[^;\s]`
+	USERNAME_PATTERN = `` // TODO: add validation pattern
+	PHONE_PATTERN    = `` // TODO: add validation pattern
+	SAVE_FORMAT      = "%s;%s\n"
 )
 
 var (
 	errFileDamage      = fmt.Errorf("the file is damaged")
 	errContactNotFound = fmt.Errorf("contact not found")
 )
+
+type Command struct {
+	Title       string
+	Description string
+	Action      func(*PhoneBook, *bufio.Scanner) error
+}
 
 type Contact struct {
 	Username string
@@ -27,12 +35,28 @@ type Contact struct {
 
 type PhoneBook struct {
 	Contacts *[]Contact
-	Filename string
+	commands *[]Command
+	filename string
 }
 
 func NewPhoneBook(f string) (*PhoneBook, error) {
 	pb := &PhoneBook{
-		Filename: f,
+		commands: &[]Command{
+			{
+				Title:       "help",
+				Description: "Показывает справку",
+				Action: func(pb *PhoneBook, s *bufio.Scanner) error {
+					for _, cmd := range *pb.commands {
+						fmt.Println("Команда:", cmd.Title)
+						fmt.Println("Описание:", cmd.Description)
+						fmt.Println()
+					}
+
+					return nil
+				},
+			},
+		},
+		filename: f,
 	}
 
 	err := pb.LoadPhoneBook()
@@ -43,16 +67,37 @@ func NewPhoneBook(f string) (*PhoneBook, error) {
 	return pb, nil
 }
 
+func (pb *PhoneBook) AddCommands(cmds *[]Command) {
+	newCmds := append(*((*pb).commands), *cmds...)
+	pb.commands = &newCmds
+}
+
+func (pb *PhoneBook) Run() error {
+	sc := bufio.NewScanner(os.Stdin)
+
+	for {
+		fmt.Print(">>> ")
+		sc.Scan()
+		cmdTitle := sc.Text()
+
+		for _, cmd := range *pb.commands {
+			if cmdTitle == cmd.Title {
+				cmd.Action(pb, sc)
+			}
+		}
+	}
+}
+
 // Загрузить данные
 func (pb *PhoneBook) LoadPhoneBook() error {
-	file, err := os.OpenFile(pb.Filename, os.O_RDWR|os.O_CREATE, FILE_PERMISSION)
+	file, err := os.OpenFile(pb.filename, os.O_RDWR|os.O_CREATE, FILE_PERMISSION)
 	if err != nil {
 		return err
 	}
 
 	defer file.Close()
 
-	reg, err := regexp.Compile(REGULAR_EXPRESSION)
+	reg, err := regexp.Compile(FILE_PATTERN)
 	if err != nil {
 		return err
 	}
@@ -89,7 +134,7 @@ func (pb *PhoneBook) LoadPhoneBook() error {
 
 // Сохранить книгу
 func (pb *PhoneBook) SavePhoneBook() error {
-	file, err := os.OpenFile(pb.Filename, os.O_RDWR, FILE_PERMISSION)
+	file, err := os.OpenFile(pb.filename, os.O_RDWR, FILE_PERMISSION)
 	if err != nil {
 		return err
 	}
@@ -113,88 +158,100 @@ func (pb *PhoneBook) SavePhoneBook() error {
 }
 
 // Найти пользователя
-func (pb *PhoneBook) FindByUsername(u string) (*Contact, error) {
-	var contact *Contact
+func (pb *PhoneBook) FindByUsername(contact *Contact) error {
 	for _, c := range *pb.Contacts {
-		if c.Username == u {
+		if c.Username == contact.Username {
 			contact = &c
+			break
 		}
 	}
 
-	if len(contact.Username) == 0 {
-		return nil, errContactNotFound
+	if len(contact.Phone) == 0 {
+		return errContactNotFound
 	}
 
-	return contact, nil
+	return nil
 }
 
 func main() {
-
 	pb, err := NewPhoneBook(FILE_NAME)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
+	pb.AddCommands(&[]Command{
+		{
+			Title:       "print",
+			Description: "Выводит список на печать.",
+			Action: func(pb *PhoneBook, s *bufio.Scanner) error {
+				fmt.Println("Имя контакта    |Телефон")
 
-	for {
-		fmt.Print(">>> ")
-		scanner.Scan()
-		action := scanner.Text()
+				for _, el := range *pb.Contacts {
+					fmt.Println(el.Username, el.Phone)
+				}
 
-		switch action {
-		case "print":
-			for _, el := range *pb.Contacts {
-				fmt.Println("Username:", el.Username, "phone:", el.Phone)
-			}
+				return nil
+			},
+		},
+		{
+			Title:       "create",
+			Description: "Создает новую запись.",
+			Action: func(pb *PhoneBook, s *bufio.Scanner) error {
+				var contact Contact
+				fmt.Print("Введите имя контакта >>> ")
+				s.Scan()
+				contact.Username = s.Text() // TODO: add validation
 
-		case "create":
-			var contact Contact
-			fmt.Print("Enter username >>> ")
-			scanner.Scan()
-			contact.Username = scanner.Text()
+				fmt.Print("Введите телефон >>> ")
+				s.Scan()
+				contact.Phone = s.Text() // TODO: add validation
 
-			fmt.Print("Enter phone >>> ")
-			scanner.Scan()
-			contact.Phone = scanner.Text()
+				*pb.Contacts = append(*pb.Contacts, contact)
 
-			*pb.Contacts = append(*pb.Contacts, contact)
+				pb.SavePhoneBook() // FIXME: remove it
 
-			pb.SavePhoneBook()
+				return nil
+			},
+		},
+		{
+			Title:       "edit",
+			Description: "Изменяет запись.",
+			Action: func(pb *PhoneBook, s *bufio.Scanner) error {
+				var contact Contact
+				fmt.Print("Введите имя контакта >>> ")
+				s.Scan()
+				contact.Username = s.Text() // TODO: add validation
 
-		case "edit":
-			fmt.Print("Enter username >>> ")
-			scanner.Scan()
-			username := scanner.Text()
+				err := pb.FindByUsername(&contact)
+				if err != nil {
+					fmt.Println(err)
+					return nil
+				}
 
-			contact, err := pb.FindByUsername(username)
-			if err != nil {
-				fmt.Println(err.Error())
-			} else {
 				fmt.Println("Username:", contact.Username, "phone:", contact.Phone)
 
-				fmt.Print("Enter new username (Enter if not change) >>> ")
-				scanner.Scan()
-				username := scanner.Text()
+				fmt.Print("Введите новое имя (Enter - не изменять) >>> ")
+				s.Scan()
+				username := s.Text()
 				fmt.Println(username)
 				if username != "" {
 					contact.Username = username
 				}
 
-				fmt.Print("Enter new phone (Enter if not change) >>> ")
-				scanner.Scan()
-				phone := scanner.Text()
+				fmt.Print("Введите новый телефон (Enter - не изменять >>> ")
+				s.Scan()
+				phone := s.Text()
 				if phone != "" {
 					contact.Phone = phone
 				}
 
-			}
+				return nil
+			},
+		},
+	})
 
-		case "save":
-			err := pb.SavePhoneBook()
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
+	err = pb.Run()
+	if err != nil {
+		log.Fatal(err)
 	}
 }
