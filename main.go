@@ -2,21 +2,27 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
+	"regexp"
 )
 
 const (
-	DB_FILE_NAME = "dirictories.json"
+	FILE_NAME          = "dirictories.csv"
+	FILE_PERMISSION    = 0666
+	REGULAR_EXPRESSION = `([A-z0-9])+[^;\s]`
+	SAVE_FORMAT        = "%s;%s\n"
+)
+
+var (
+	errFileDamage      = fmt.Errorf("the file is damaged")
+	errContactNotFound = fmt.Errorf("contact not found")
 )
 
 type Contact struct {
-	Username string `json:"username"`
-	Phone    string `json:"phone"`
+	Username string
+	Phone    string
 }
 
 type PhoneBook struct {
@@ -37,25 +43,43 @@ func NewPhoneBook(f string) (*PhoneBook, error) {
 	return pb, nil
 }
 
-// Загружает книгу из файла
-// TODO: Create load to CSV
+// Загрузить данные
 func (pb *PhoneBook) LoadPhoneBook() error {
-	file, err := os.Open(pb.Filename)
+	file, err := os.OpenFile(pb.Filename, os.O_RDWR|os.O_CREATE, FILE_PERMISSION)
 	if err != nil {
 		return err
 	}
 
 	defer file.Close()
 
-	bytes, err := ioutil.ReadAll(file)
+	reg, err := regexp.Compile(REGULAR_EXPRESSION)
 	if err != nil {
 		return err
 	}
 
+	sc := bufio.NewScanner(file)
+
+	if sc.Scan() {
+		if !reg.MatchString(sc.Text()) {
+			return errFileDamage
+		}
+	} else {
+		return nil
+	}
+
 	var contacts []Contact
 
-	if err := json.Unmarshal(bytes, &contacts); err != nil {
-		return err
+	for sc.Scan() {
+		if !reg.MatchString(sc.Text()) {
+			return errFileDamage
+		}
+
+		vals := reg.FindAllString(sc.Text(), -1)
+
+		contacts = append(contacts, Contact{
+			Username: vals[0],
+			Phone:    vals[1],
+		})
 	}
 
 	pb.Contacts = &contacts
@@ -63,18 +87,32 @@ func (pb *PhoneBook) LoadPhoneBook() error {
 	return nil
 }
 
-// Сохраняет книгу
-// TODO: Create save to CSV
+// Сохранить книгу
 func (pb *PhoneBook) SavePhoneBook() error {
-	j, err := json.Marshal(pb.Contacts)
+	file, err := os.OpenFile(pb.Filename, os.O_RDWR, FILE_PERMISSION)
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(pb.Filename, j, 0644)
+	defer file.Close()
+
+	wr := bufio.NewWriter(file)
+
+	if _, err := fmt.Fprintf(wr, SAVE_FORMAT, "username", "phone"); err != nil {
+		return err
+	}
+
+	for _, c := range *pb.Contacts {
+		_, err = fmt.Fprintf(wr, SAVE_FORMAT, c.Username, c.Phone)
+		if err != nil {
+			return err
+		}
+	}
+
+	return wr.Flush()
 }
 
-// Ищет пользователя
+// Найти пользователя
 func (pb *PhoneBook) FindByUsername(u string) (*Contact, error) {
 	var contact *Contact
 	for _, c := range *pb.Contacts {
@@ -84,7 +122,7 @@ func (pb *PhoneBook) FindByUsername(u string) (*Contact, error) {
 	}
 
 	if len(contact.Username) == 0 {
-		return nil, errors.New("contact not found")
+		return nil, errContactNotFound
 	}
 
 	return contact, nil
@@ -92,7 +130,7 @@ func (pb *PhoneBook) FindByUsername(u string) (*Contact, error) {
 
 func main() {
 
-	pb, err := NewPhoneBook(DB_FILE_NAME)
+	pb, err := NewPhoneBook(FILE_NAME)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -110,8 +148,6 @@ func main() {
 				fmt.Println("Username:", el.Username, "phone:", el.Phone)
 			}
 
-			break
-
 		case "create":
 			var contact Contact
 			fmt.Print("Enter username >>> ")
@@ -126,10 +162,7 @@ func main() {
 
 			pb.SavePhoneBook()
 
-			break
-
 		case "edit":
-
 			fmt.Print("Enter username >>> ")
 			scanner.Scan()
 			username := scanner.Text()
@@ -162,8 +195,6 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-
-			break
 		}
 	}
 }
