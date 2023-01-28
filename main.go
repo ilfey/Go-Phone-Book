@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strconv"
 )
 
 const (
@@ -158,19 +159,20 @@ func (pb *PhoneBook) SavePhoneBook() error {
 }
 
 // Найти пользователя
-func (pb *PhoneBook) FindByUsername(contact *Contact) error {
-	for _, c := range *pb.Contacts {
-		if c.Username == contact.Username {
-			contact = &c
-			break
+func (pb *PhoneBook) FindByUsername(username string) *[]int {
+	var contacts []int
+
+	for i, c := range *pb.Contacts {
+		if c.Username == username {
+			contacts = append(contacts, i)
 		}
 	}
 
-	if len(contact.Phone) == 0 {
-		return errContactNotFound
+	if len(contacts) == 0 {
+		return nil
 	}
 
-	return nil
+	return &contacts
 }
 
 func main() {
@@ -208,7 +210,7 @@ func main() {
 
 				*pb.Contacts = append(*pb.Contacts, contact)
 
-				pb.SavePhoneBook() // FIXME: remove it
+				fmt.Println("Запись обновлена.")
 
 				return nil
 			},
@@ -217,34 +219,77 @@ func main() {
 			Title:       "edit",
 			Description: "Изменяет запись.",
 			Action: func(pb *PhoneBook, s *bufio.Scanner) error {
-				var contact Contact
 				fmt.Print("Введите имя контакта >>> ")
 				s.Scan()
-				contact.Username = s.Text() // TODO: add validation
+				u := s.Text() // TODO: add validation
 
-				err := pb.FindByUsername(&contact)
-				if err != nil {
-					fmt.Println(err)
+				contactIndeces := pb.FindByUsername(u)
+				if contactIndeces == nil {
+					fmt.Println(errContactNotFound)
 					return nil
 				}
 
-				fmt.Println("Username:", contact.Username, "phone:", contact.Phone)
+				var contactIndex int
+				var contact Contact
 
-				fmt.Print("Введите новое имя (Enter - не изменять) >>> ")
-				s.Scan()
-				username := s.Text()
-				fmt.Println(username)
-				if username != "" {
-					contact.Username = username
+				if len(*contactIndeces) == 1 {
+					contactIndex = (*contactIndeces)[0]
+					contact = (*pb.Contacts)[contactIndex]
+				} else {
+					fmt.Println("Было найдено несколько записей с таким именем. Введите номер записи, которую нужно изменить.")
+					for i, el := range *contactIndeces {
+						fmt.Printf("%d. Имя: %s Телефон: %s\n", i+1, (*pb.Contacts)[el].Username, (*pb.Contacts)[el].Phone)
+					}
+
+					for {
+						s.Scan()
+						index, err := strconv.Atoi(s.Text())
+						if err != nil {
+							fmt.Println("Нужно ввести число.")
+							continue
+						}
+
+						if index > len(*contactIndeces) || index < 1 {
+							fmt.Println("Пожалуйста, введите правильный номер записи.")
+							continue
+						}
+
+						contactIndex = (*contactIndeces)[index-1]
+						contact = (*pb.Contacts)[contactIndex]
+						break
+					}
 				}
 
-				fmt.Print("Введите новый телефон (Enter - не изменять >>> ")
-				s.Scan()
-				phone := s.Text()
-				if phone != "" {
-					contact.Phone = phone
-				}
+				c := contact
 
+				for {
+					fmt.Println("Имя:", contact.Username, "Телефон:", contact.Phone)
+					fmt.Print("Введите новое имя. (Enter - не изменять) >>> ")
+					s.Scan()
+					username := s.Text() // TODO: add validation
+					if username != "" {
+						c.Username = username
+					}
+
+					fmt.Print("Введите новый телефон. (Enter - не изменять) >>> ")
+					s.Scan()
+					phone := s.Text() // TODO: add validation
+					if phone != "" {
+						c.Phone = phone
+					}
+
+					if c.Username == contact.Username && c.Phone == contact.Phone {
+						break
+					}
+
+					fmt.Print("Проверьте, все ли данные введены правильно. (Y/n) >>> ")
+					s.Scan()
+					if s.Text() != "n" {
+						(*pb.Contacts)[contactIndex] = c
+						fmt.Println("Запись обновлена.")
+						break
+					}
+				}
 				return nil
 			},
 		},
