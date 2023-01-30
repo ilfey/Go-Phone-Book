@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"regexp"
-	"strconv"
 )
 
 const (
@@ -26,7 +25,7 @@ var (
 type Command struct {
 	Title       string
 	Description string
-	Action      func(*PhoneBook, *bufio.Scanner) error
+	Action      func(*PhoneBook) error
 }
 
 type Contact struct {
@@ -46,7 +45,7 @@ func NewPhoneBook(f string) (*PhoneBook, error) {
 			{
 				Title:       "help",
 				Description: "Показывает справку",
-				Action: func(pb *PhoneBook, s *bufio.Scanner) error {
+				Action: func(pb *PhoneBook) error {
 					for _, cmd := range *pb.commands {
 						fmt.Println("Команда:", cmd.Title)
 						fmt.Println("Описание:", cmd.Description)
@@ -74,16 +73,14 @@ func (pb *PhoneBook) AddCommands(cmds *[]Command) {
 }
 
 func (pb *PhoneBook) Run() error {
-	sc := bufio.NewScanner(os.Stdin)
-
 	for {
 		fmt.Print(">>> ")
-		sc.Scan()
-		cmdTitle := sc.Text()
+		var cmdTitle string
+		fmt.Scanln(&cmdTitle)
 
 		for _, cmd := range *pb.commands {
 			if cmdTitle == cmd.Title {
-				cmd.Action(pb, sc)
+				cmd.Action(pb)
 			}
 		}
 	}
@@ -185,7 +182,7 @@ func main() {
 		{
 			Title:       "print",
 			Description: "Выводит список на печать.",
-			Action: func(pb *PhoneBook, s *bufio.Scanner) error {
+			Action: func(pb *PhoneBook) error {
 				fmt.Println("Имя контакта    |Телефон")
 
 				for _, el := range *pb.Contacts {
@@ -198,19 +195,17 @@ func main() {
 		{
 			Title:       "create",
 			Description: "Создает новую запись.",
-			Action: func(pb *PhoneBook, s *bufio.Scanner) error {
+			Action: func(pb *PhoneBook) error {
 				var contact Contact
 				fmt.Print("Введите имя контакта >>> ")
-				s.Scan()
-				contact.Username = s.Text() // TODO: add validation
+				fmt.Scanln(&contact.Username) // TODO: add validation
 
 				fmt.Print("Введите телефон >>> ")
-				s.Scan()
-				contact.Phone = s.Text() // TODO: add validation
+				fmt.Scanln(&contact.Phone) // TODO: add validation
 
 				*pb.Contacts = append(*pb.Contacts, contact)
 
-				fmt.Println("Запись обновлена.")
+				fmt.Println("Запись создана.")
 
 				return nil
 			},
@@ -218,12 +213,12 @@ func main() {
 		{
 			Title:       "edit",
 			Description: "Изменяет запись.",
-			Action: func(pb *PhoneBook, s *bufio.Scanner) error {
+			Action: func(pb *PhoneBook) error {
 				fmt.Print("Введите имя контакта >>> ")
-				s.Scan()
-				u := s.Text() // TODO: add validation
+				var username string
+				fmt.Scanln(&username) // TODO: add validation
 
-				contactIndeces := pb.FindByUsername(u)
+				contactIndeces := pb.FindByUsername(username)
 				if contactIndeces == nil {
 					fmt.Println(errContactNotFound)
 					return nil
@@ -242,12 +237,8 @@ func main() {
 					}
 
 					for {
-						s.Scan()
-						index, err := strconv.Atoi(s.Text())
-						if err != nil {
-							fmt.Println("Нужно ввести число.")
-							continue
-						}
+						var index int
+						fmt.Scanln(&index)
 
 						if index > len(*contactIndeces) || index < 1 {
 							fmt.Println("Пожалуйста, введите правильный номер записи.")
@@ -265,15 +256,16 @@ func main() {
 				for {
 					fmt.Println("Имя:", contact.Username, "Телефон:", contact.Phone)
 					fmt.Print("Введите новое имя. (Enter - не изменять) >>> ")
-					s.Scan()
-					username := s.Text() // TODO: add validation
+
+					var username string
+					fmt.Scanln(&username) // TODO: add validation
 					if username != "" {
 						c.Username = username
 					}
 
 					fmt.Print("Введите новый телефон. (Enter - не изменять) >>> ")
-					s.Scan()
-					phone := s.Text() // TODO: add validation
+					var phone string
+					fmt.Scanln(&phone) // TODO: add validation
 					if phone != "" {
 						c.Phone = phone
 					}
@@ -283,8 +275,9 @@ func main() {
 					}
 
 					fmt.Print("Проверьте, все ли данные введены правильно. (Y/n) >>> ")
-					s.Scan()
-					if s.Text() != "n" {
+					var ok string
+					fmt.Scanln(&ok)
+					if ok != "n" {
 						(*pb.Contacts)[contactIndex] = c
 						fmt.Println("Запись обновлена.")
 						break
