@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"regexp"
+	"syscall"
 )
 
 const (
@@ -287,6 +289,21 @@ func main() {
 			},
 		},
 	})
+
+	signalChan := make(chan os.Signal)
+	signal.Notify(signalChan, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
+	go func() {
+		<-signalChan
+		err := pb.SavePhoneBook()
+		if err != nil {
+			fmt.Println("Данные не сохранены.")
+		} else {
+			fmt.Println("Данные сохранены.")
+		}
+
+		os.Exit(0)
+	}()
 
 	err = pb.Run()
 	if err != nil {
