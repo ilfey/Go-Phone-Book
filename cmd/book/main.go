@@ -16,19 +16,19 @@ var (
 
 func getContact(indeces *[]int, pb *PhoneBook) (int, *Contact) {
 	var contactIndex int
-	var contact Contact
+	var contact *Contact
 
 	if len(*indeces) == 1 {
 		contactIndex = (*indeces)[0]
-		contact = (*pb.Contacts)[contactIndex]
+		contact = pb.Contacts[contactIndex]
 	} else {
-		var contacts []Contact
+		var contacts []*Contact
 
 		for _, i := range *indeces {
-			contacts = append(contacts, (*pb.Contacts)[i])
+			contacts = append(contacts, pb.Contacts[i])
 		}
 
-		PrintlnContacts(&contacts)
+		PrintlnContacts(contacts)
 
 		fmt.Println("Было найдено несколько записей с таким именем. Введите номер записи.")
 
@@ -44,12 +44,12 @@ func getContact(indeces *[]int, pb *PhoneBook) (int, *Contact) {
 			}
 
 			contactIndex = (*indeces)[index-1]
-			contact = (*pb.Contacts)[contactIndex]
+			contact = pb.Contacts[contactIndex]
 			break
 		}
 	}
 
-	return contactIndex, &contact
+	return contactIndex, contact
 }
 
 func main() {
@@ -58,7 +58,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	pb.AddCommands(&[]Command{
+	pb.AddCommands([]*Command{
 		{
 			Title:       "print",
 			Description: "Выводит список на печать.",
@@ -71,14 +71,14 @@ func main() {
 			Title:       "create",
 			Description: "Создает новую запись.",
 			Action: func(pb *PhoneBook) error {
-				var contact Contact
+				contact := &Contact{}
 				fmt.Print("Введите имя контакта >>> ")
 				fmt.Scanln(&contact.Username) // TODO: add validation
 
 				fmt.Print("Введите телефон >>> ")
 				fmt.Scanln(&contact.Phone) // TODO: add validation
 
-				*pb.Contacts = append(*pb.Contacts, contact)
+				pb.Contacts = append(pb.Contacts, contact)
 
 				fmt.Println("Запись создана.")
 
@@ -128,7 +128,7 @@ func main() {
 					var ok string
 					fmt.Scanln(&ok)
 					if ok != "n" {
-						(*pb.Contacts)[contactIndex] = c
+						pb.Contacts[contactIndex] = &c
 						fmt.Println("Запись обновлена.")
 						break
 					}
@@ -158,9 +158,9 @@ func main() {
 				var ok string
 				fmt.Scanln(&ok)
 				if ok != "n" {
-					(*pb.Contacts)[contactIndex] = (*pb.Contacts)[len(*pb.Contacts)-1]
-					// (*pb.Contacts)[len(*pb.Contacts)-1] = nil // TODO
-					(*pb.Contacts) = (*pb.Contacts)[:len(*pb.Contacts)-1]
+					pb.Contacts[contactIndex] = (pb.Contacts)[len(pb.Contacts)-1]
+					pb.Contacts[len(pb.Contacts)-1] = nil
+					pb.Contacts = pb.Contacts[:len(pb.Contacts)-1]
 					fmt.Println("Запись удалена.")
 				}
 

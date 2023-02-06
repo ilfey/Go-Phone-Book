@@ -35,14 +35,14 @@ type Contact struct {
 }
 
 type PhoneBook struct {
-	Contacts *[]Contact
-	commands *[]Command
+	Contacts []*Contact
+	commands []*Command
 	filename string
 }
 
 func NewPhoneBook(f string) (*PhoneBook, error) {
 	pb := &PhoneBook{
-		commands: &[]Command{
+		commands: []*Command{
 			{
 				Title:       "help",
 				Description: "Показывает справку.",
@@ -63,9 +63,8 @@ func NewPhoneBook(f string) (*PhoneBook, error) {
 	return pb, nil
 }
 
-func (pb *PhoneBook) AddCommands(cmds *[]Command) {
-	newCmds := append(*((*pb).commands), *cmds...)
-	pb.commands = &newCmds
+func (pb *PhoneBook) AddCommands(cmds []*Command) {
+	pb.commands = append(pb.commands, cmds...)
 }
 
 func (pb *PhoneBook) Run() error {
@@ -74,7 +73,7 @@ func (pb *PhoneBook) Run() error {
 		var cmdTitle string
 		fmt.Scanln(&cmdTitle)
 
-		for _, cmd := range *pb.commands {
+		for _, cmd := range pb.commands {
 			if cmdTitle == cmd.Title {
 				cmd.Action(pb)
 			}
@@ -98,10 +97,10 @@ func (pb *PhoneBook) LoadPhoneBook() error {
 
 	sc := bufio.NewScanner(file)
 
-	var contacts []Contact
+	var contacts []*Contact
 
 	defer func() {
-		pb.Contacts = &contacts
+		pb.Contacts = contacts
 	}()
 
 	for sc.Scan() {
@@ -111,7 +110,7 @@ func (pb *PhoneBook) LoadPhoneBook() error {
 
 		vals := reg.FindAllString(sc.Text(), -1)
 
-		contacts = append(contacts, Contact{
+		contacts = append(contacts, &Contact{
 			Username: vals[0],
 			Phone:    vals[1],
 		})
@@ -131,7 +130,7 @@ func (pb *PhoneBook) SavePhoneBook() error {
 
 	wr := bufio.NewWriter(file)
 
-	for _, c := range *pb.Contacts {
+	for _, c := range pb.Contacts {
 		_, err = fmt.Fprintf(wr, SAVE_FORMAT, c.Username, c.Phone)
 		if err != nil {
 			return err
@@ -145,7 +144,7 @@ func (pb *PhoneBook) SavePhoneBook() error {
 func (pb *PhoneBook) FindByUsername(username string) *[]int {
 	var contacts []int
 
-	for i, c := range *pb.Contacts {
+	for i, c := range pb.Contacts {
 		if c.Username == username {
 			contacts = append(contacts, i)
 		}
@@ -167,11 +166,11 @@ func PrintlnContact(c *Contact) {
 	fmt.Println(ai.BOLD + ai.MAGENTA + "=================#================" + ai.NOSTYLE)
 }
 
-func PrintlnContacts(cs *[]Contact) {
+func PrintlnContacts(cs []*Contact) {
 	fmt.Println(ai.BOLD+ai.INVERSE+"  №  "+ai.BG_MAGENTA+"#"+ai.NOSTYLE+ai.BOLD+ai.INVERSE+"       Имя        "+ai.BG_MAGENTA+"#"+ai.NOSTYLE+ai.BOLD+ai.INVERSE+"    Телефон    ", ai.NOSTYLE)
 	fmt.Println(ai.BOLD + ai.MAGENTA + "=====#==================#================" + ai.NOSTYLE)
 
-	for i, c := range *cs {
+	for i, c := range cs {
 		i++
 		index := strconv.Itoa(i) + "   "[len(strconv.Itoa(i)):]
 		username := c.Username + "                "[len(c.Username):]
@@ -182,8 +181,8 @@ func PrintlnContacts(cs *[]Contact) {
 	fmt.Println(ai.BOLD + ai.MAGENTA + "=====#==================#================" + ai.NOSTYLE)
 }
 
-func PrintHelp(cmds *[]Command) {
-	for _, cmd := range *cmds {
+func PrintHelp(cmds []*Command) {
+	for _, cmd := range cmds {
 		fmt.Println(ai.BG_GREEN + ai.BOLD + "Команда:" + ai.NOSTYLE + " " + ai.BOLD + ai.UNDERLINE + cmd.Title + ai.NOSTYLE)
 		fmt.Println(ai.BG_MAGENTA + ai.BOLD + "Описание:" + ai.NOSTYLE + " " + ai.ITALIC + cmd.Description + ai.NOSTYLE)
 		fmt.Println()
