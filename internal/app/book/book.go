@@ -14,8 +14,6 @@ const (
 	FILE_NAME        = "dirictories.csv"
 	FILE_PERMISSION  = 0666
 	FILE_PATTERN     = `([A-z0-9])+[^;\s]`
-	USERNAME_PATTERN = `` // TODO: add validation pattern
-	PHONE_PATTERN    = `` // TODO: add validation pattern
 	SAVE_FORMAT      = "%s;%s\n"
 )
 
