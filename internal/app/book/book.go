@@ -122,7 +122,7 @@ func (pb *PhoneBook) LoadPhoneBook() error {
 
 // Сохранить книгу
 func (pb *PhoneBook) SavePhoneBook() error {
-	file, err := os.OpenFile(pb.filename, os.O_WRONLY, FILE_PERMISSION)
+	file, err := os.OpenFile(pb.filename, os.O_WRONLY|os.O_TRUNC, FILE_PERMISSION)
 	if err != nil {
 		return err
 	}
@@ -159,11 +159,11 @@ func (pb *PhoneBook) FindByUsername(username string) *[]int {
 }
 
 func PrintlnContact(c *Contact) {
-	fmt.Printf("%s%s%s\n", ai.BOLD+ai.INVERSE, "       Имя       #     Телефон    ", ai.NOSTYLE)
+	fmt.Println(ai.BOLD + ai.INVERSE + "       Имя       " + ai.BG_MAGENTA + "#" + ai.NOSTYLE + ai.BOLD + ai.INVERSE + "     Телефон    " + ai.NOSTYLE)
 	fmt.Println(ai.BOLD + ai.MAGENTA + "=================#================" + ai.NOSTYLE)
 	username := c.Username + "                "[len(c.Username):]
 	phone := c.Phone + "                "[len(c.Phone):]
-	fmt.Printf("%s || %s\n", username, phone)
+	fmt.Println(username + " # " + phone)
 	fmt.Println(ai.BOLD + ai.MAGENTA + "=================#================" + ai.NOSTYLE)
 }
 
@@ -176,7 +176,7 @@ func PrintlnContacts(cs *[]Contact) {
 		index := strconv.Itoa(i) + "   "[len(strconv.Itoa(i)):]
 		username := c.Username + "                "[len(c.Username):]
 		phone := c.Phone + "                "[len(c.Phone):]
-		fmt.Printf(" %s "+ai.BOLD+ai.MAGENTA+"#"+ai.NOSTYLE+" %s "+ai.BOLD+ai.MAGENTA+"#"+ai.NOSTYLE+" %s\n", index, username, phone)
+		fmt.Println(" " + index + " " + ai.BOLD + ai.MAGENTA + "#" + ai.NOSTYLE + " " + username + " " + ai.BOLD + ai.MAGENTA + "#" + ai.NOSTYLE + " " + phone)
 	}
 
 	fmt.Println(ai.BOLD + ai.MAGENTA + "=====#==================#================" + ai.NOSTYLE)

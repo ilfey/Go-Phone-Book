@@ -159,6 +159,7 @@ func main() {
 				fmt.Scanln(&ok)
 				if ok != "n" {
 					(*pb.Contacts)[contactIndex] = (*pb.Contacts)[len(*pb.Contacts)-1]
+					// (*pb.Contacts)[len(*pb.Contacts)-1] = nil // TODO
 					(*pb.Contacts) = (*pb.Contacts)[:len(*pb.Contacts)-1]
 					fmt.Println("Запись удалена.")
 				}
