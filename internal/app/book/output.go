@@ -25,7 +25,7 @@ func PrintlnContacts(cs []*Contact) {
 		index := strconv.Itoa(i) + "   "[len(strconv.Itoa(i)):]
 		username := c.Username + "                "[len(c.Username):]
 		phone := c.Phone + "                "[len(c.Phone):]
-		if i % 2 == 0 {
+		if i%2 == 0 {
 			fmt.Println(ai.BG_BLACK + " " + index + " " + ai.BOLD + ai.MAGENTA + "#" + ai.NOCOLOR + " " + username + " " + ai.BOLD + ai.MAGENTA + "#" + ai.NOCOLOR + " " + phone + ai.NOSTYLE)
 			continue
 		}

@@ -101,7 +101,7 @@ func main() {
 					}
 
 					bk.PrintlnContact(&c)
-					
+
 					ok := bk.GetConfirm("Проверьте, все ли данные введены правильно. (Y/n) >>> ", true)
 					if ok {
 						pb.Contacts[contactIndex] = &c

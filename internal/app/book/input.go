@@ -8,6 +8,7 @@ import (
 
 	ai "github.com/ilfey/Go-Phone-Book/internal/pkg/ansi"
 )
+
 // Получить имя
 func GetUsername(sc *bufio.Scanner) string {
 	reg := regexp.MustCompile(USERNAME_PATTERN)
@@ -29,6 +30,7 @@ func GetUsername(sc *bufio.Scanner) string {
 		ai.Errorln("Данное имя не допустимо.")
 	}
 }
+
 // Получить имя или пустую строку
 func GetUsernameOrEmpty(sc *bufio.Scanner) string {
 	reg := regexp.MustCompile(USERNAME_PATTERN)
@@ -48,6 +50,7 @@ func GetUsernameOrEmpty(sc *bufio.Scanner) string {
 		ai.Errorln("Данное имя не допустимо.")
 	}
 }
+
 // Получить телефон
 func GetPhone(sc *bufio.Scanner) string {
 	reg := regexp.MustCompile(PHONE_PATTERN)
@@ -67,6 +70,7 @@ func GetPhone(sc *bufio.Scanner) string {
 		ai.Errorln("Данный номер не допустим.")
 	}
 }
+
 // Получить телефон или пустую строку
 func GetPhoneOrEmpty(sc *bufio.Scanner) string {
 	reg := regexp.MustCompile(PHONE_PATTERN)
