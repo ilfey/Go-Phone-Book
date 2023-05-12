@@ -29,11 +29,11 @@ const (
 	BG_BLACK   = "\x1b[40m"
 	BG_RED     = "\x1b[41m"
 	BG_GREEN   = "\x1b[42m"
-	BG_YELLOW = "\x1b[43m"
+	BG_YELLOW  = "\x1b[43m"
 	BG_BLUE    = "\x1b[44m"
 	BG_MAGENTA = "\x1b[45m"
-	BG_CYAN  = "\x1b[46m"
-	BG_WHITE = "\x1b[47m"
+	BG_CYAN    = "\x1b[46m"
+	BG_WHITE   = "\x1b[47m"
 	// Resets
 	NOSTYLE     = "\x1b[0m"
 	NOUNDERLINE = "\x1b[24m"
@@ -41,37 +41,37 @@ const (
 	NOCOLOR     = "\x1b[39m"
 )
 
-func PrintSuccess(a ...interface{}) {
+func Success(a ...interface{}) {
 	fmt.Print(BG_GREEN)
 	fmt.Print(a...)
 	fmt.Print(NOSTYLE)
 }
 
-func PrintWarning(a ...interface{}) {
-	fmt.Print(BG_MAGENTA)
+func Warn(a ...interface{}) {
+	fmt.Print(BG_YELLOW)
 	fmt.Print(a...)
 	fmt.Print(NOSTYLE)
 }
 
-func PrintError(a ...interface{}) {
+func Error(a ...interface{}) {
 	fmt.Print(BG_RED)
 	fmt.Print(a...)
 	fmt.Print(NOSTYLE)
 }
 
-func PrintlnSuccess(a ...interface{}) {
+func Successln(a ...interface{}) {
 	fmt.Print(BG_GREEN)
 	fmt.Print(a...)
 	fmt.Println(NOSTYLE)
 }
 
-func PrintlnWarning(a ...interface{}) {
-	fmt.Print(BG_MAGENTA)
+func Warnln(a ...interface{}) {
+	fmt.Print(BG_YELLOW)
 	fmt.Print(a...)
 	fmt.Println(NOSTYLE)
 }
 
-func PrintlnError(a ...interface{}) {
+func Errorln(a ...interface{}) {
 	fmt.Print(BG_RED)
 	fmt.Print(a...)
 	fmt.Println(NOSTYLE)

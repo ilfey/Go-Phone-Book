@@ -1,0 +1,55 @@
+# https://taskfile.dev
+
+version: '3'
+
+
+vars:
+  EXE: main{{exeExt}}
+
+
+tasks:
+
+  default:
+    - task: dev
+
+  run:
+    desc: Runs phonebook
+    cmds:
+      - go run -v ./cmd/main
+
+  dev:
+    desc: Runs live restart phonebook
+    deps: [build]
+    cmds:
+      - go build -v ./cmd/main
+      - ./{{.EXE}}
+    sources:
+      - ./**/*.go
+      - ./**/*.tpl
+      - ./**/*.tmpl
+      - ./**/*.html
+      - ./**/*.env
+
+  build:
+    desc: Build phonebook
+    deps: [format]
+    cmds:
+      - go build -v ./cmd/main
+
+  format:
+    desc: Format sources
+    cmds:
+      - go fmt {{catLines .PACKAGES}}
+    vars:
+      PACKAGES:
+        sh: go list ./...
+    silent: true
+
+  test:
+    desc: Runs test server
+    cmds:
+      - go test {{catLines .PACKAGES}}
+    vars:
+      PACKAGES:
+        sh: go list ./...
+    silent: true

@@ -5,17 +5,16 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strconv"
+	"strings"
 
 	ai "github.com/ilfey/Go-Phone-Book/internal/pkg/ansi"
 )
 
 const (
-	FILE_NAME        = "dirictories.csv"
 	FILE_PERMISSION  = 0666
-	FILE_PATTERN     = `([A-z0-9])+[^;\s]`
-	USERNAME_PATTERN = `` // TODO: add validation pattern
-	PHONE_PATTERN    = `` // TODO: add validation pattern
+	USERNAME_PATTERN = `^[a-zA-Zа-яА-Я]\w*(\s\w+)*`
+	PHONE_PATTERN    = `\d{8,15}$`
+	FILE_PATTERN     = `^[a-zA-Zа-яА-Я]+(\s[a-zA-Zа-яА-Я]+)*;[+]\d{8,15}$`
 	SAVE_FORMAT      = "%s;%s\n"
 )
 
@@ -35,19 +34,26 @@ type Contact struct {
 }
 
 type PhoneBook struct {
+	Scanner  *bufio.Scanner
 	Contacts []*Contact
 	commands []*Command
 	filename string
 }
 
+// Создать объект книги
 func NewPhoneBook(f string) (*PhoneBook, error) {
 	pb := &PhoneBook{
+		Scanner: bufio.NewScanner(os.Stdin),
 		commands: []*Command{
 			{
 				Title:       "help",
 				Description: "Показывает справку.",
 				Action: func(pb *PhoneBook) error {
-					PrintHelp(pb.commands)
+					for _, cmd := range pb.commands {
+						fmt.Println(ai.BG_GREEN + ai.BOLD + "Команда:" + ai.NOSTYLE + " " + ai.BOLD + ai.UNDERLINE + cmd.Title + ai.NOSTYLE)
+						fmt.Println(ai.BG_MAGENTA + ai.BOLD + "Описание:" + ai.NOSTYLE + " " + ai.ITALIC + cmd.Description + ai.NOSTYLE)
+						fmt.Println()
+					}
 					return nil
 				},
 			},
@@ -63,6 +69,7 @@ func NewPhoneBook(f string) (*PhoneBook, error) {
 	return pb, nil
 }
 
+// Добавить команды
 func (pb *PhoneBook) AddCommands(cmds []*Command) {
 	pb.commands = append(pb.commands, cmds...)
 }
@@ -70,8 +77,8 @@ func (pb *PhoneBook) AddCommands(cmds []*Command) {
 func (pb *PhoneBook) Run() error {
 	for {
 		fmt.Print(">>> ")
-		var cmdTitle string
-		fmt.Scanln(&cmdTitle)
+
+		cmdTitle := GetString()
 
 		for _, cmd := range pb.commands {
 			if cmdTitle == cmd.Title {
@@ -99,16 +106,15 @@ func (pb *PhoneBook) LoadPhoneBook() error {
 
 	var contacts []*Contact
 
-	defer func() {
-		pb.Contacts = contacts
-	}()
-
 	for sc.Scan() {
-		if !reg.MatchString(sc.Text()) {
+		text := sc.Text()
+
+		if !reg.MatchString(text) {
+			fmt.Println(text)
 			return errFileDamage
 		}
 
-		vals := reg.FindAllString(sc.Text(), -1)
+		vals := strings.Split(text, ";")
 
 		contacts = append(contacts, &Contact{
 			Username: vals[0],
@@ -116,6 +122,7 @@ func (pb *PhoneBook) LoadPhoneBook() error {
 		})
 	}
 
+	pb.Contacts = contacts
 	return nil
 }
 
@@ -140,8 +147,8 @@ func (pb *PhoneBook) SavePhoneBook() error {
 	return wr.Flush()
 }
 
-// Найти пользователя
-func (pb *PhoneBook) FindByUsername(username string) *[]int {
+// Найти пользователя по имени
+func (pb *PhoneBook) FindByUsername(username string) []int {
 	var contacts []int
 
 	for i, c := range pb.Contacts {
@@ -150,41 +157,22 @@ func (pb *PhoneBook) FindByUsername(username string) *[]int {
 		}
 	}
 
-	if len(contacts) == 0 {
-		return nil
-	}
-
-	return &contacts
+	return contacts
 }
 
-func PrintlnContact(c *Contact) {
-	fmt.Println(ai.BOLD + ai.INVERSE + "       Имя       " + ai.BG_MAGENTA + "#" + ai.NOSTYLE + ai.BOLD + ai.INVERSE + "     Телефон    " + ai.NOSTYLE)
-	fmt.Println(ai.BOLD + ai.MAGENTA + "=================#================" + ai.NOSTYLE)
-	username := c.Username + "                "[len(c.Username):]
-	phone := c.Phone + "                "[len(c.Phone):]
-	fmt.Println(username + " # " + phone)
-	fmt.Println(ai.BOLD + ai.MAGENTA + "=================#================" + ai.NOSTYLE)
-}
+// Найти пользователя по телефону
+func (pb *PhoneBook) FindByPhone(phone string) []int {
+	var contacts []int
 
-func PrintlnContacts(cs []*Contact) {
-	fmt.Println(ai.BOLD+ai.INVERSE+"  №  "+ai.BG_MAGENTA+"#"+ai.NOSTYLE+ai.BOLD+ai.INVERSE+"       Имя        "+ai.BG_MAGENTA+"#"+ai.NOSTYLE+ai.BOLD+ai.INVERSE+"    Телефон    ", ai.NOSTYLE)
-	fmt.Println(ai.BOLD + ai.MAGENTA + "=====#==================#================" + ai.NOSTYLE)
-
-	for i, c := range cs {
-		i++
-		index := strconv.Itoa(i) + "   "[len(strconv.Itoa(i)):]
-		username := c.Username + "                "[len(c.Username):]
-		phone := c.Phone + "                "[len(c.Phone):]
-		fmt.Println(" " + index + " " + ai.BOLD + ai.MAGENTA + "#" + ai.NOSTYLE + " " + username + " " + ai.BOLD + ai.MAGENTA + "#" + ai.NOSTYLE + " " + phone)
+	if !strings.HasPrefix(phone, "+") {
+		phone = "+" + phone
 	}
 
-	fmt.Println(ai.BOLD + ai.MAGENTA + "=====#==================#================" + ai.NOSTYLE)
-}
-
-func PrintHelp(cmds []*Command) {
-	for _, cmd := range cmds {
-		fmt.Println(ai.BG_GREEN + ai.BOLD + "Команда:" + ai.NOSTYLE + " " + ai.BOLD + ai.UNDERLINE + cmd.Title + ai.NOSTYLE)
-		fmt.Println(ai.BG_MAGENTA + ai.BOLD + "Описание:" + ai.NOSTYLE + " " + ai.ITALIC + cmd.Description + ai.NOSTYLE)
-		fmt.Println()
+	for i, c := range pb.Contacts {
+		if c.Phone == phone {
+			contacts = append(contacts, i)
+		}
 	}
+
+	return contacts
 }
