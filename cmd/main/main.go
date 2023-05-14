@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -15,26 +14,6 @@ const (
 	FILE_NAME = "dirictories.csv"
 )
 
-func FindContact(pb *bk.PhoneBook) (int, *bk.Contact) {
-	var indeces []int
-
-	ok := bk.GetConfirm("Вы хотите найти запись по имени контакта? (Y/n) >>> ", true)
-	if ok {
-		username := bk.GetUsername(pb.Scanner)
-		indeces = pb.FindByUsername(username)
-	} else {
-		phone := bk.GetPhone(pb.Scanner)
-		indeces = pb.FindByPhone(phone)
-	}
-
-	if len(indeces) == 0 {
-		ai.Errorln("Контакт не найден.")
-		return -1, nil
-	}
-
-	return bk.GetContact(indeces, pb)
-}
-
 func main() {
 	pb, err := bk.NewPhoneBook(FILE_NAME)
 	if err != nil {
@@ -45,7 +24,7 @@ func main() {
 		{
 			Title:       "print",
 			Description: "Выводит список на печать.",
-			Action: func(pb *bk.PhoneBook) error {
+			Action: func(pb *bk.PhoneBook, _ *bk.Command) error {
 				bk.PrintlnContacts(pb.Contacts)
 				return nil
 			},
@@ -53,13 +32,11 @@ func main() {
 		{
 			Title:       "create",
 			Description: "Создает новую запись.",
-			Action: func(pb *bk.PhoneBook) error {
+			Action: func(pb *bk.PhoneBook, this *bk.Command) error {
 				contact := &bk.Contact{}
 
-				contact.Username = bk.GetUsername(pb.Scanner)
-
-				fmt.Print("Введите телефон >>> ")
-				contact.Phone = bk.GetString() // TODO: add validation
+				contact.Username = bk.GetUsername(pb.Scanner, this)
+				contact.Phone = bk.GetPhone(pb.Scanner, this)
 
 				pb.Contacts = append(pb.Contacts, contact)
 
@@ -71,8 +48,25 @@ func main() {
 		{
 			Title:       "edit",
 			Description: "Изменяет запись.",
-			Action: func(pb *bk.PhoneBook) error {
-				contactIndex, contact := FindContact(pb)
+			Action: func(pb *bk.PhoneBook, this *bk.Command) error {
+
+				var indeces []int
+
+				ok := bk.GetConfirm("Вы хотите найти запись по имени контакта? (Y/n)", this, true)
+				if ok {
+					username := bk.GetUsername(pb.Scanner, this)
+					indeces = pb.FindByUsername(username)
+				} else {
+					phone := bk.GetPhone(pb.Scanner, this)
+					indeces = pb.FindByPhone(phone)
+				}
+
+				if len(indeces) == 0 {
+					ai.Errorln("Контакт не найден.")
+					return nil
+				}
+
+				contactIndex, contact := bk.GetContact(indeces, pb, this)
 				if contactIndex < 0 {
 					return nil
 				}
@@ -82,18 +76,14 @@ func main() {
 				for {
 					bk.PrintlnContact(contact)
 
-					fmt.Println("Введите новое имя. (Enter - не изменять)")
-
-					username := bk.GetUsernameOrEmpty(pb.Scanner)
+					username := bk.GetUsernameOrEmpty(pb.Scanner, this)
 					if username != "" {
 						c.Username = username
 					}
 
-					fmt.Println("Введите новый телефон (без знака \"+\"). (Enter - не изменять)")
-
-					phone := bk.GetPhoneOrEmpty(pb.Scanner)
+					phone := bk.GetPhoneOrEmpty(pb.Scanner, this)
 					if phone != "" {
-						c.Phone = "+" + phone
+						c.Phone = phone
 					}
 
 					if c.Username == contact.Username && c.Phone == contact.Phone {
@@ -102,7 +92,7 @@ func main() {
 
 					bk.PrintlnContact(&c)
 
-					ok := bk.GetConfirm("Проверьте, все ли данные введены правильно. (Y/n) >>> ", true)
+					ok := bk.GetConfirm("Проверьте, все ли данные введены правильно. (Y/n)", this, true)
 					if ok {
 						pb.Contacts[contactIndex] = &c
 						ai.Successln("Запись обновлена.")
@@ -115,15 +105,31 @@ func main() {
 		{
 			Title:       "delete",
 			Description: "Удаляет запись.",
-			Action: func(pb *bk.PhoneBook) error {
-				contactIndex, contact := FindContact(pb)
+			Action: func(pb *bk.PhoneBook, this *bk.Command) error {
+				var indeces []int
+
+				ok := bk.GetConfirm("Вы хотите найти запись по имени контакта? (Y/n)", this, true)
+				if ok {
+					username := bk.GetUsername(pb.Scanner, this)
+					indeces = pb.FindByUsername(username)
+				} else {
+					phone := bk.GetPhone(pb.Scanner, this)
+					indeces = pb.FindByPhone(phone)
+				}
+
+				if len(indeces) == 0 {
+					ai.Errorln("Контакт не найден.")
+					return nil
+				}
+
+				contactIndex, contact := bk.GetContact(indeces, pb, this)
 				if contactIndex < 0 {
 					return nil
 				}
 
 				bk.PrintlnContact(contact)
 
-				ok := bk.GetConfirm("Вы действительно хотите удалить эту запись? (Y/n) >>> ", true)
+				ok = bk.GetConfirm("Вы действительно хотите удалить эту запись? (Y/n)", this, true)
 				if ok {
 					pb.Contacts[contactIndex] = pb.Contacts[len(pb.Contacts)-1]
 					pb.Contacts[len(pb.Contacts)-1] = nil
@@ -137,16 +143,16 @@ func main() {
 		{
 			Title:       "find",
 			Description: "Поиск записи.",
-			Action: func(pb *bk.PhoneBook) error {
+			Action: func(pb *bk.PhoneBook, this *bk.Command) error {
 
 				var indeces []int
 
-				ok := bk.GetConfirm("Вы хотите найти запись по имени контакта? (Y/n) >>> ", true)
+				ok := bk.GetConfirm("Вы хотите найти запись по имени контакта? (Y/n)", this, true)
 				if ok {
-					username := bk.GetUsername(pb.Scanner)
+					username := bk.GetUsername(pb.Scanner, this)
 					indeces = pb.FindByUsername(username)
 				} else {
-					phone := bk.GetPhone(pb.Scanner)
+					phone := bk.GetPhone(pb.Scanner, this)
 					indeces = pb.FindByPhone(phone)
 				}
 

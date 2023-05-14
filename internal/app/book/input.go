@@ -10,13 +10,11 @@ import (
 )
 
 // Получить имя
-func GetUsername(sc *bufio.Scanner) string {
+func GetUsername(sc *bufio.Scanner, cmd *Command) string {
 	reg := regexp.MustCompile(USERNAME_PATTERN)
 
-	fmt.Println("Введите имя записи.")
-
 	for {
-		fmt.Print(">>> ")
+		cmd.ScanCtxWithMsg("Введите имя")
 
 		username, ok := GetLine(sc)
 		if !ok {
@@ -32,11 +30,11 @@ func GetUsername(sc *bufio.Scanner) string {
 }
 
 // Получить имя или пустую строку
-func GetUsernameOrEmpty(sc *bufio.Scanner) string {
+func GetUsernameOrEmpty(sc *bufio.Scanner, cmd *Command) string {
 	reg := regexp.MustCompile(USERNAME_PATTERN)
 
 	for {
-		fmt.Print(">>> ")
+		cmd.ScanCtxWithMsg("Введите имя (Enter - пропустить)")
 
 		username, ok := GetLine(sc)
 		if !ok || username == "" {
@@ -52,16 +50,18 @@ func GetUsernameOrEmpty(sc *bufio.Scanner) string {
 }
 
 // Получить телефон
-func GetPhone(sc *bufio.Scanner) string {
+func GetPhone(sc *bufio.Scanner, cmd *Command) string {
 	reg := regexp.MustCompile(PHONE_PATTERN)
 
 	for {
-		fmt.Print(">>> ")
+		cmd.ScanCtxWithMsg("Введите телефон (без \"+\")")
 
 		phone, ok := GetLine(sc)
 		if !ok {
 			continue
 		}
+
+		phone = "+" + phone
 
 		if reg.MatchString(phone) {
 			return phone
@@ -72,16 +72,18 @@ func GetPhone(sc *bufio.Scanner) string {
 }
 
 // Получить телефон или пустую строку
-func GetPhoneOrEmpty(sc *bufio.Scanner) string {
+func GetPhoneOrEmpty(sc *bufio.Scanner, cmd *Command) string {
 	reg := regexp.MustCompile(PHONE_PATTERN)
 
 	for {
-		fmt.Print(">>> ")
+		cmd.ScanCtxWithMsg("Введите телефон (Enter - пропустить)")
 
 		phone, ok := GetLine(sc)
 		if !ok || phone == "" {
 			return ""
 		}
+
+		phone = "+" + phone
 
 		if reg.MatchString(phone) {
 			return phone
@@ -90,6 +92,8 @@ func GetPhoneOrEmpty(sc *bufio.Scanner) string {
 		ai.Errorln("Данный номер не допустим.")
 	}
 }
+
+// Получить строку из консоли
 func GetLine(sc *bufio.Scanner) (string, bool) {
 	if sc.Scan() {
 		input := sc.Text()
@@ -106,6 +110,7 @@ func GetString() string {
 	return str
 }
 
+// Получить число из консоли
 func GetInt() int {
 	var i int
 	fmt.Scanln(&i)
@@ -113,8 +118,8 @@ func GetInt() int {
 }
 
 // Получить от пользователя подтверждение
-func GetConfirm(question string, fallback bool) bool {
-	fmt.Print(question)
+func GetConfirm(question string, cmd *Command, fallback bool) bool {
+	cmd.ScanCtxWithMsg(question)
 
 	var ok string
 	fmt.Scanln(&ok)
@@ -134,7 +139,7 @@ func GetConfirm(question string, fallback bool) bool {
 }
 
 // Требовать от пользователя выбрать контакт
-func GetContact(indeces []int, pb *PhoneBook) (int, *Contact) {
+func GetContact(indeces []int, pb *PhoneBook, cmd *Command) (int, *Contact) {
 	var contactIndex int
 	var contact *Contact
 
@@ -153,7 +158,7 @@ func GetContact(indeces []int, pb *PhoneBook) (int, *Contact) {
 		ai.Warnln("Было найдено несколько записей. Введите номер записи.")
 
 		for {
-			fmt.Print(">>> ")
+			cmd.ScanCtx()
 
 			index := GetInt()
 

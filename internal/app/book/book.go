@@ -12,9 +12,9 @@ import (
 
 const (
 	FILE_PERMISSION  = 0666
-	USERNAME_PATTERN = `^[a-zA-Zа-яА-Я]\w*(\s\w+)*`
-	PHONE_PATTERN    = `\d{8,15}$`
-	FILE_PATTERN     = `^[a-zA-Zа-яА-Я]+(\s[a-zA-Zа-яА-Я]+)*;[+]\d{8,15}$`
+	USERNAME_PATTERN = `^[a-zA-Zа-яА-Я\s]{2,32}$`
+	PHONE_PATTERN    = `[+]\d{8,15}$`
+	FILE_PATTERN     = `^[a-zA-Zа-яА-Я\s]{2,32};[+]\d{8,15}$`
 	SAVE_FORMAT      = "%s;%s\n"
 )
 
@@ -25,7 +25,19 @@ var (
 type Command struct {
 	Title       string
 	Description string
-	Action      func(*PhoneBook) error
+	Action      func(*PhoneBook, *Command) error
+}
+
+func (cmd *Command) PrintCtx() {
+	fmt.Printf("%s[ %s ]%s ", ai.BG_BLUE, cmd.Title, ai.NORMAL)
+}
+
+func (cmd *Command) ScanCtx() {
+	fmt.Printf("%s[ %s ]%s >>> ", ai.BG_BLUE, cmd.Title, ai.NORMAL)
+}
+
+func (cmd *Command) ScanCtxWithMsg(msg string) {
+	fmt.Printf("%s[ %s ]%s %s >>> ", ai.BG_BLUE, cmd.Title, ai.NORMAL, msg)
 }
 
 type Contact struct {
@@ -48,7 +60,7 @@ func NewPhoneBook(f string) (*PhoneBook, error) {
 			{
 				Title:       "help",
 				Description: "Показывает справку.",
-				Action: func(pb *PhoneBook) error {
+				Action: func(pb *PhoneBook, _ *Command) error {
 					for _, cmd := range pb.commands {
 						fmt.Println(ai.BG_GREEN + ai.BOLD + "Команда:" + ai.NOSTYLE + " " + ai.BOLD + ai.UNDERLINE + cmd.Title + ai.NOSTYLE)
 						fmt.Println(ai.BG_MAGENTA + ai.BOLD + "Описание:" + ai.NOSTYLE + " " + ai.ITALIC + cmd.Description + ai.NOSTYLE)
@@ -82,7 +94,7 @@ func (pb *PhoneBook) Run() error {
 
 		for _, cmd := range pb.commands {
 			if cmdTitle == cmd.Title {
-				cmd.Action(pb)
+				cmd.Action(pb, cmd)
 			}
 		}
 	}
